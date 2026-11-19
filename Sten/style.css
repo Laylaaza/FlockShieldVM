@@ -1,0 +1,147 @@
+body {
+  margin: 0;
+  background: #F4F6F8;
+  color: #1B2430;
+  font-family: system-ui, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #DDE3EA;
+  padding: 12px 24px;
+}
+
+nav {
+  display: flex;
+  gap: 16px;
+}
+
+nav a {
+  color: #4A5565;
+  text-decoration: none;
+}
+
+#connection-status {
+  margin-left: auto;
+  font-size: 14px;
+  color: #4A5565;
+}
+
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.tiles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.tile {
+  flex: 1 1 200px;
+  background: #FFFFFF;
+  border: 1px solid #DDE3EA;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.tile-label {
+  font-size: 14px;
+  color: #4A5565;
+}
+
+.tile-value {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.tile-note {
+  font-size: 14px;
+  color: #4A5565;
+}
+
+.field-card {
+  margin-top: 20px;
+  background: #FFFFFF;
+  border: 1px solid #DDE3EA;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.field-card h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+#field-map {
+  display: block;
+  width: 100%;
+  max-width: 700px;
+  height: auto;
+  margin: 0 auto;
+}
+
+.zone {
+  fill: #EEF2F5;
+  stroke: #9AA6B5;
+  stroke-width: 1.5;
+}
+
+.crop-field {
+  fill: #F7F9FA;
+  stroke: #9AA6B5;
+  stroke-width: 1.5;
+}
+
+.zone-label {
+  font-size: 12px;
+  font-weight: 600;
+  fill: #3A4556;
+  text-anchor: middle;
+}
+
+.zone-active {
+  fill: #DCE8FA;
+  stroke: #1D5BBF;
+  stroke-width: 3;
+}
+
+.module-name {
+  font-size: 12px;
+  font-weight: 700;
+  fill: #1B2430;
+}
+
+.module-status {
+  font-size: 12px;
+  fill: #4A5565;
+}
+
+.module-shape {
+  stroke: #FFFFFF;
+  stroke-width: 2;
+}
+
+.module-calm .module-shape {
+  fill: #596273;
+}
+
+.module-active .module-shape {
+  fill: #1D5BBF;
+}
+
+.module-low-battery .module-shape {
+  fill: #B54708;
+}
+
+.module-offline .module-shape {
+  fill: #B42318;
+}

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Overzicht - FlockShield</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+  <script src="mock-data.js"></script>
+  <script src="api.js"></script>
+  <script src="overzicht.js"></script>
+</body>
+<body>
+  <header>
+    <strong>FlockShield</strong>
+    <nav>
+      <a href="index.html">Overzicht</a>
+      <a href="gebeurtenissen.html">Gebeurtenissen</a>
+    </nav>
+    <span id="connection-status">Verbonden · laatste data 14:32:05</span>
+  </header>
+
+  <main>
+    <h1>Overzicht</h1>
+
+    <section class="tiles">
+      <div class="tile">
+        <div class="tile-label">Modules online</div>
+        <div class="tile-value" id="online-modules-value">5 / 6</div>
+        <div class="tile-note" id="online-modules-note">1 offline: module 5</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile-label">Laagste accu</div>
+        <div class="tile-value" id="lowest-battery-value">18%</div>
+        <div class="tile-note" id="lowest-battery-note">Module 4, onder de grens van 20%</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile-label">Detecties vandaag</div>
+        <div class="tile-value" id="detections-value">4</div>
+        <div class="tile-note" id="detections-note">3 verjagingen, 1 geen actie</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile-label">Laatste detectie</div>
+        <div class="tile-value" id="last-detection-value">14:31</div>
+        <div class="tile-note" id="last-detection-note">Zone C, zekerheid 91%</div>
+      </div>
+    </section>
+
+    <section class="field-card">
+      <h2>Veldkaart</h2>
+      <svg id="field-map" viewBox="-90 -50 600 400" role="img"
+           aria-label="Veldkaart met vier zones en zes modules. Zone C is actief. Module 3 is actief, module 4 heeft een lage accu, module 5 is offline.">
+        <polygon id="zone-a" class="zone" points="0,0 80,60 80,240 0,300" />
+        <polygon id="zone-b" class="zone" points="0,0 400,0 320,60 80,60" />
+        <polygon id="zone-c" class="zone zone-active" points="400,0 400,300 320,240 320,60" />
+        <polygon id="zone-d" class="zone" points="0,300 400,300 320,240 80,240" />
+        <rect class="crop-field" x="80" y="60" width="240" height="180" />
+
+        <text class="zone-label" x="40" y="155">Zone A</text>
+        <text class="zone-label" x="200" y="35">Zone B</text>
+        <text class="zone-label" x="360" y="155">Zone C</text>
+        <text class="zone-label" x="200" y="275">Zone D</text>
+
+        <g class="module module-calm" id="module-1">
+          <circle class="module-shape" cx="0" cy="150" r="9" />
+          <text class="module-name" x="-16" y="146" text-anchor="end">Module 1</text>
+          <text class="module-status" x="-16" y="161" text-anchor="end">Rustig</text>
+        </g>
+
+        <g class="module module-calm" id="module-2">
+          <circle class="module-shape" cx="200" cy="0" r="9" />
+          <text class="module-name" x="200" y="-30" text-anchor="middle">Module 2</text>
+          <text class="module-status" x="200" y="-16" text-anchor="middle">Rustig</text>
+        </g>
+
+        <g class="module module-active" id="module-3">
+          <polygon class="module-shape" points="400,69 410,87 390,87" />
+          <text class="module-name" x="416" y="76">Module 3</text>
+          <text class="module-status" x="416" y="91">Actief</text>
+        </g>
+
+        <g class="module module-low-battery" id="module-4">
+          <polygon class="module-shape" points="390,212 410,212 400,230" />
+          <text class="module-name" x="416" y="216">Module 4</text>
+          <text class="module-status" x="416" y="231">Accu laag 18%</text>
+        </g>
+
+        <g class="module module-offline" id="module-5">
+          <rect class="module-shape" x="122" y="292" width="16" height="16" />
+          <text class="module-name" x="130" y="326" text-anchor="middle">Module 5</text>
+          <text class="module-status" x="130" y="341" text-anchor="middle">Offline</text>
+        </g>
+
+        <g class="module module-calm" id="module-6">
+          <circle class="module-shape" cx="270" cy="300" r="9" />
+          <text class="module-name" x="270" y="326" text-anchor="middle">Module 6</text>
+          <text class="module-status" x="270" y="341" text-anchor="middle">Rustig</text>
+        </g>
+      </svg>
+    </section>
+  </main>
+</body>
+</html>
