@@ -7,7 +7,7 @@
 'use strict';
 
 const API_ROOT = '/api';
-const AUTO_REFRESH_MS = 60_000;
+const AUTO_REFRESH_MS = 5_000;
 const el = (id) => document.getElementById(id);
 
 async function getJson(path) {
