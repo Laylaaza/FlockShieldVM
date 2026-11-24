@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gebeurtenissen - FlockShield</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <a href="index.html" class="logo-link">
+      <img src="logo.png" alt="FlockShield" class="logo" width="162" height="52">
+    </a>
+    <nav>
+      <a href="index.html">Overzicht</a>
+      <a href="gebeurtenissen.html" aria-current="page">Gebeurtenissen</a>
+    </nav>
+    <span id="connection-status">Verbinden...</span>
+  </header>
+
+  <main>
+    <h1>Gebeurtenissen</h1>
+
+    <section class="card">
+      <div class="filters">
+        <label>
+          Zone
+          <select id="zone-filter">
+            <option value="">Alle zones</option>
+            <option value="A">Zone A</option>
+            <option value="B">Zone B</option>
+            <option value="C">Zone C</option>
+            <option value="D">Zone D</option>
+          </select>
+        </label>
+
+        <label>
+          Datum
+          <input type="date" id="date-filter">
+        </label>
+
+        <button type="button" id="reset-filters">Filters wissen</button>
+      </div>
+
+      <p id="events-count" class="events-count"></p>
+      <ol id="events-list" class="events-list"></ol>
+    </section>
+  </main>
+
+  <script src="api.js"></script>
+  <script src="helpers.js"></script>
+  <script src="gebeurtenissen.js"></script>
+</body>
+</html>

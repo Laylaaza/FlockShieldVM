@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Overzicht - FlockShield</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <a href="index.html" class="logo-link">
+      <img src="logo.png" alt="FlockShield" class="logo" width="162" height="52">
+    </a>
+    <nav>
+      <a href="index.html" aria-current="page">Overzicht</a>
+      <a href="gebeurtenissen.html">Gebeurtenissen</a>
+    </nav>
+    <span id="connection-status">Verbinden...</span>
+  </header>
+
+  <main>
+    <h1>Overzicht</h1>
+
+    <div id="situation-bar" class="situation" role="status">
+      <span id="situation-text">Gegevens laden...</span>
+      <span id="situation-alerts" class="situation-alerts"></span>
+    </div>
+
+    <section class="tiles">
+      <div class="tile">
+        <div class="tile-label">Modules online</div>
+        <div class="tile-value" id="online-modules-value">-</div>
+        <div class="tile-note" id="online-modules-note">Laden...</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile-label">Laagste accu</div>
+        <div class="tile-value" id="lowest-battery-value">-</div>
+        <div class="tile-note" id="lowest-battery-note">Laden...</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile-label">Detecties vandaag</div>
+        <div class="tile-value" id="detections-value">-</div>
+        <div class="tile-note" id="detections-note">Laden...</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile-label">Laatste detectie</div>
+        <div class="tile-value" id="last-detection-value">-</div>
+        <div class="tile-note" id="last-detection-note">Laden...</div>
+      </div>
+    </section>
+
+    <div class="columns">
+      <section class="card map-card">
+        <h2>Veldkaart</h2>
+        <svg id="field-map" viewBox="-90 -50 600 400" role="img"
+             aria-label="Veldkaart met vier zones: A links, B boven, C rechts en D onder">
+          <polygon id="zone-a" class="zone" points="0,0 80,60 80,240 0,300" />
+          <polygon id="zone-b" class="zone" points="0,0 400,0 320,60 80,60" />
+          <polygon id="zone-c" class="zone" points="400,0 400,300 320,240 320,60" />
+          <polygon id="zone-d" class="zone" points="0,300 400,300 320,240 80,240" />
+          <rect class="crop-field" x="80" y="60" width="240" height="180" />
+
+          <text class="zone-label" x="40" y="155">Zone A</text>
+          <text class="zone-label" x="200" y="35">Zone B</text>
+          <text class="zone-label" x="360" y="155">Zone C</text>
+          <text class="zone-label" x="200" y="275">Zone D</text>
+
+          <g id="modules-layer"></g>
+        </svg>
+
+        <ul class="legend">
+          <li><span class="legend-calm" aria-hidden="true">●</span> Rustig</li>
+          <li><span class="legend-active" aria-hidden="true">▲</span> Actief</li>
+          <li><span class="legend-low-battery" aria-hidden="true">▼</span> Accu laag</li>
+          <li><span class="legend-offline" aria-hidden="true">■</span> Offline</li>
+        </ul>
+      </section>
+
+      <div class="side">
+        <section class="card">
+          <h2>Aandacht nodig</h2>
+          <ul id="alerts-list" class="alerts-list"></ul>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h2>Laatste gebeurtenissen</h2>
+            <a href="gebeurtenissen.html" class="card-link">Alles bekijken</a>
+          </div>
+          <ol id="events-list" class="events-list"></ol>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="api.js"></script>
+  <script src="helpers.js"></script>
+  <script src="overzicht.js"></script>
+</body>
+</html>
