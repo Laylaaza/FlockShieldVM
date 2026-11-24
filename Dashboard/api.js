@@ -10,7 +10,7 @@ async function getModules() {
   }
   const data = await response.json();
   // klopt het antwoord niet, dan telt het als geen verbinding
-  if (!Array.isArray(data.modules) || !data.serverTime) {
+  if (!Array.isArray(data.modules) {
     throw new Error("Antwoord van /modules klopt niet");
   }
   return data;
