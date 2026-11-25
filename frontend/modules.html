@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7f9">
+  <title>Modules · FlockShield</title>
+  <link rel="stylesheet" href="analysis.css?v=2">
+  <script defer src="vendor/chart.umd.js"></script>
+  <script type="module" src="analysis.js?v=2"></script>
+</head>
+<body data-view="modules">
+  <a class="skip" href="#main">Naar inhoud</a>
+  <header class="app-header">
+    <div class="shell header-content">
+      <a class="brand" href="index.html"><span class="brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s7-3 7-9V5l-7-3-7 3v7c0 6 7 9 7 9Z"/><path d="m8 13 4-4 4 4m-4-4v7"/></svg>
+      </span>FlockShield</a>
+      <nav aria-label="Hoofdnavigatie">
+        <a href="index.html">Inzichten</a>
+        <a href="modules.html" aria-current="page">Modules</a>
+      </nav>
+      <button id="refresh" class="button" type="button">Vernieuwen</button>
+    </div>
+  </header>
+  <main class="shell" id="main">
+    <div class="page-heading">
+      <div><h1>Modules</h1><p>Selecteer een module om de status en gebeurtenissen te bekijken.</p></div>
+      <span id="sync" role="status">Gegevens laden…</span>
+    </div>
+    <form id="filters" class="module-picker">
+      <label>Module <select name="module"><option value="">Kies een module</option></select></label>
+    </form>
+    <p id="notice" class="notice" role="status" hidden></p>
+    <section id="module-detail" hidden>
+      <div class="module-heading"><h2 id="module-name"></h2><span id="module-status" class="badge"></span></div>
+      <p id="module-meta"></p>
+      <div id="metrics" class="metrics module-metrics" aria-label="Kerncijfers van de module"></div>
+      <section class="panel module-chart">
+        <header><h2>Reactietijd</h2><p>Van detectie tot bevestigde activering, in seconden</p></header>
+        <div class="chart-frame" id="reaction-frame"></div>
+        <details id="reaction-data"><summary>Bekijk waarden</summary><div></div></details>
+      </section>
+      <section class="panel log" id="logboek">
+        <header><div><h2>Gebeurtenissen</h2><p>Detecties, afschrikacties en geregistreerde fouten</p></div>
+          <label>Type <select id="event-type"><option value="">Alle gebeurtenissen</option><option value="detection">Detecties</option><option value="action">Afschrikacties</option><option value="error">Fouten</option></select></label>
+        </header>
+        <div id="events"></div>
+        <footer><small id="event-count"></small><div><button class="button" id="prev" type="button">Vorige</button> <button class="button" id="next" type="button">Volgende</button></div></footer>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

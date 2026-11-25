@@ -1,1 +1,1 @@
-import './overzicht.js';
+import './overzicht.js?v=4';

@@ -16,3 +16,13 @@ php -S localhost:8000 -t frontend backend/router.php
 Open het dashboard op [localhost:8000](http://localhost:8000/). De FlockShield-API gebruikt op dezelfde server routes onder /api. De SmartLamp-API is lokaal bereikbaar via /api.php.
 
 Zie de [backendhandleiding](backend/README.md) voor SQL Server en de [SmartLamp-handleiding](backend/smartlamp/README.md) voor het oudere endpoint.
+
+## Prestatiedashboard
+
+Het dashboard leest `GET /api/modules`, `GET /api/detections`, `GET /api/actions`, `GET /api/ai/test-rounds` en `GET /api/ai/evaluations`. Gebruik op Ubuntu voor de drie aanvullende leesroutes dezelfde API-upstream als voor `/api/modules`, met behoud van de bestaande methode- en toegangsregels. Chart.js wordt met de frontend meegeleverd.
+
+- Precision = correct positieve voorspellingen / alle geldige positieve voorspellingen. Recall = correct positieve voorspellingen / alle geldige tests met vogels. AI-evaluaties gebruiken één geselecteerde gegevensbron en de UTC-uitvoerdatum van hun testronde. Scenario’s worden gegroepeerd op testronde en testomstandigheid, met het testitem als terugval.
+- Het activeringspercentage deelt bevestigde acties door acties met een bekende uitkomst. Een geldige bevestiging valt op of na het opdrachttijdstip. Een foutmelding of expliciete foutstatus zonder bevestiging telt als mislukt. Openstaande en tegenstrijdige acties tellen niet mee.
+- Reactietijd is de tijd tussen detectie en bevestigde activering. Alleen via detectie-ID gekoppelde acties met een geldige chronologie worden geplot.
+- Datavolledigheid is het aandeel opgehaalde gebeurtenissen met een registratie-ID, geldig tijdstip, positief module-ID en bron (detectie), of mechanisme en status (actie). De optionele betrouwbaarheidsscore telt niet mee.
+- De API levert maximaal 1.000 recente detecties en 1.000 recente acties. Op Inzichten geldt het scenario- en bronfilter voor AI-evaluaties. Op Modules geldt de moduleselectie voor de status, reactietijden en het logboek van die module.

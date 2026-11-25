@@ -1,4 +1,4 @@
-import { getCollection } from './api.js';
+import { getCollection } from './api.js?v=2';
 
 const eventsPage = document.body.dataset.view === 'events';
 const icons = {
@@ -41,18 +41,20 @@ let loading = false;
 let lastUpdated = '';
 let failures = 0;
 let range = 7;
+let selectedDay;
 let page = 1;
+let selectedModule = eventsPage ? new URLSearchParams(location.search).get('module') ?? '' : '';
 const pageSize = 12;
 
 const nav = (href, label, glyph, selected) =>
   '<a href="' + href + '"' + (selected ? ' aria-current="page"' : '') + '>' + icon(glyph) + label + '</a>';
 
 byId('app').innerHTML = '<a class="skip" href="#main">Naar inhoud</a>' +
-  '<aside class="sidebar"><a class="brand" href="index.html"><span>' + icon('brand') + '</span>FlockShield</a>' +
-  '<nav aria-label="Hoofdnavigatie">' + nav('index.html', 'Overzicht', 'overview', !eventsPage) +
+  '<header class="site-header"><a class="brand" href="index.html"><span>' + icon('brand') + '</span>FlockShield</a>' +
+  '<nav aria-label="Hoofdnavigatie">' + nav('index.html', 'Inzichten', 'overview', false) + nav('modules.html', 'Modules', 'module', !eventsPage) +
   nav('gebeurtenissen.html', 'Gebeurtenissen', 'activity', eventsPage) + '</nav>' +
-  '<div class="sidebar-footer"><span class="connection" id="connection" role="status"><i></i> Verbinden…</span></div></aside>' +
-  '<main id="main"><header class="top"><div><h1>' + (eventsPage ? 'Gebeurtenissen' : 'Overzicht') + '</h1><p>' +
+  '<span class="connection" id="connection" role="status"><i></i> Verbinden…</span></header>' +
+  '<main id="main"><header class="top"><div><h1>' + (eventsPage ? 'Gebeurtenissen' : 'Modules') + '</h1><p>' +
   (eventsPage ? 'Zoek en bekijk geregistreerde vogeldetecties.' : 'Volg vogeldetecties en de status van je modules.') +
   '</p></div><div class="refresh-area"><small id="updated"></small><button id="refresh" class="button">' + icon('refresh') + ' Vernieuwen</button></div></header>' +
   '<div id="notice" class="notice" role="status" hidden></div>' +
@@ -63,8 +65,8 @@ byId('app').innerHTML = '<a class="skip" href="#main">Naar inhoud</a>' +
     '<button class="button" id="reset" type="button">Wis filters</button></div><div id="events"></div>' +
     '<div class="pagination"><small id="result" aria-live="polite"></small><div><button class="button" id="prev">Vorige</button><button class="button" id="next">Volgende</button></div></div></section>'
   : '<div class="stats" id="stats"></div><div class="middle"><section class="panel"><div class="panel-head"><div><h2>Detectieactiviteit</h2><p>Per dag, binnen de opgehaalde detecties</p></div>' +
-    '<div class="segments" aria-label="Grafiekperiode"><button data-range="7" aria-pressed="true">7 dagen</button><button data-range="14" aria-pressed="false">14 dagen</button></div></div><div id="chart"></div></section>' +
-    '<section class="panel"><div class="panel-head"><div><h2>Modules</h2><p>Status per module</p></div></div><div id="modules"></div></section></div>' +
+    '<div class="segments" role="group" aria-label="Grafiekperiode"><button data-range="7" aria-pressed="true">7 dagen</button><button data-range="14" aria-pressed="false">14 dagen</button></div></div><div id="chart"></div></section>' +
+    '<section class="panel"><div class="panel-head"><div><h2>Modules</h2><p>Kies een module om detecties te zien</p></div></div><div id="modules"></div></section></div>' +
     '<section class="panel"><div class="panel-head"><h2>Recente detecties</h2><a class="text-link" href="gebeurtenissen.html">Alle gebeurtenissen ' + icon('arrow') + '</a></div><div id="events"></div></section>') + '</main>';
 
 function metric(glyph, label, value, caption) {
@@ -86,8 +88,9 @@ function unavailable(label) {
 }
 
 function renderChart() {
+  const chart = byId('chart');
   if (!detections) {
-    byId('chart').innerHTML = empty(unavailable('Detecties'));
+    chart.innerHTML = empty(unavailable('Detecties'));
     return;
   }
   const key = (date) => [date.getFullYear(), date.getMonth(), date.getDate()].join('-');
@@ -102,12 +105,21 @@ function renderChart() {
     return { date, count: counts.get(key(date)) || 0 };
   });
   const highest = Math.max(1, ...days.map(({ count }) => count));
-  byId('chart').innerHTML = '<div class="chart" role="list" aria-label="Detecties per dag">' + days.map(({ date, count }) => {
-    const title = date.toLocaleDateString('nl-NL') + ' · ' + count + ' detecties';
-    return '<div class="bar-item" role="listitem" aria-label="' + title + '" title="' + title + '"><span class="bar-track"><span class="bar" style="--height:' +
+  if (!days.some(({ date }) => key(date) === selectedDay)) selectedDay = key(today);
+  const selected = days.find(({ date }) => key(date) === selectedDay);
+  const label = (date, count) => date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' }) +
+    ' · ' + count + (count === 1 ? ' detectie' : ' detecties');
+  const focusedDay = chart.contains(document.activeElement) ? document.activeElement.dataset.day : null;
+  chart.innerHTML = '<output class="chart-reading" id="chart-reading">' +
+    escape(label(selected.date, selected.count)) + '</output><div class="chart" role="group" aria-label="Kies een dag">' + days.map(({ date, count }) => {
+    const title = escape(label(date, count));
+    const day = key(date);
+    return '<button class="bar-item" type="button" data-day="' + day + '" aria-pressed="' +
+      (day === selectedDay) + '" aria-label="' + title + '" title="' + title + '"><span class="bar-track"><span class="bar" style="--height:' +
       (count / highest * 100) + '%"></span></span><small>' +
-      (range === 7 ? escape(dayFormat.format(date)) : date.getDate()) + '</small></div>';
+      (range === 7 ? escape(dayFormat.format(date)) : date.getDate()) + '</small></button>';
   }).join('') + '</div>';
+  if (focusedDay) chart.querySelector(`[data-day="${focusedDay}"]`)?.focus({ preventScroll: true });
 }
 
 function renderOverview() {
@@ -119,9 +131,10 @@ function renderOverview() {
       detections?.length ? moduleName(detections[0].module_id) : 'Meest recente registratie');
   byId('modules').innerHTML = !modules ? empty(unavailable('Modules')) : !modules.length ? empty('Er zijn nog geen modules geregistreerd.') :
     '<ul class="module-list">' + modules.map((module) =>
-      '<li><span class="tile-icon">' + icon('module') + '</span><div><strong>' + escape(moduleName(module.module_id)) +
+      '<li><a href="gebeurtenissen.html?module=' + encodeURIComponent(module.module_id) + '"><span class="tile-icon">' + icon('module') + '</span><div><strong>' + escape(moduleName(module.module_id)) +
       '</strong><small>' + escape([module.module_code, module.module_type].filter(Boolean).join(' · ')) +
-      '</small></div><span class="pill' + (active(module) ? ' active' : '') + '">' + escape(display(module.status, 'Onbekend')) + '</span></li>').join('') + '</ul>';
+      '</small></div><span class="pill' + (active(module) ? ' active' : '') + '">' + escape(display(module.status, 'Onbekend')) + '</span><span class="module-arrow">' +
+      icon('arrow') + '</span></a></li>').join('') + '</ul>';
   renderChart();
 }
 
@@ -129,7 +142,7 @@ function renderEvents() {
   let rows = detections || [];
   if (eventsPage) {
     const query = byId('search').value.trim().toLowerCase();
-    const module = byId('module-filter').value;
+    const module = selectedModule;
     rows = rows.filter((item) => (!module || String(item.module_id) === module) &&
       [item.detectie_id, item.module_id, moduleName(item.module_id), item.invoerbron, item.model_versie]
         .some((value) => String(value ?? '').toLowerCase().includes(query)));
@@ -162,10 +175,10 @@ function renderEvents() {
 
 function syncModuleFilter() {
   const filter = byId('module-filter');
-  const selected = filter.value;
   const ids = new Set([...(modules || []), ...(detections || [])].map((item) => String(item.module_id ?? '')).filter(Boolean));
+  if (selectedModule) ids.add(selectedModule);
   filter.replaceChildren(new Option('Alle modules', ''), ...[...ids].map((id) => new Option(moduleName(id), id)));
-  filter.value = ids.has(selected) ? selected : '';
+  filter.value = selectedModule;
 }
 
 async function refresh() {
@@ -209,16 +222,31 @@ byId('refresh').addEventListener('click', refresh);
 if (eventsPage) {
   const filterEvents = () => { page = 1; renderEvents(); };
   byId('search').addEventListener('input', filterEvents);
-  for (const id of ['module-filter', 'sort']) byId(id).addEventListener('change', filterEvents);
+  byId('module-filter').addEventListener('change', (event) => {
+    selectedModule = event.currentTarget.value;
+    filterEvents();
+  });
+  byId('sort').addEventListener('change', filterEvents);
   byId('reset').addEventListener('click', () => {
     byId('search').value = '';
     byId('module-filter').value = '';
+    selectedModule = '';
     byId('sort').value = 'new';
     filterEvents();
   });
   byId('prev').addEventListener('click', () => { page -= 1; renderEvents(); });
   byId('next').addEventListener('click', () => { page += 1; renderEvents(); });
 } else {
+  const chart = byId('chart');
+  chart.addEventListener('click', (event) => {
+    const day = event.target.closest('[data-day]');
+    if (!day) return;
+    selectedDay = day.dataset.day;
+    for (const button of chart.querySelectorAll('[data-day]')) {
+      button.setAttribute('aria-pressed', String(button === day));
+    }
+    byId('chart-reading').textContent = day.getAttribute('aria-label');
+  });
   const periods = document.querySelectorAll('[data-range]');
   for (const button of periods) {
     button.addEventListener('click', () => {
