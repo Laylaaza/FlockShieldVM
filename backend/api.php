@@ -2,8 +2,8 @@
 /*
  * FlockShield API
  *
- * Start vanuit de map waarin de map "flockshield" staat:
- * php -S localhost:8000 -t flockshield flockshield/api.php
+ * Start vanuit de hoofdmap van het project:
+ * php -S localhost:8000 -t frontend backend/router.php
  *
  * Voorbeeld:
  * http://localhost:8000/api/status

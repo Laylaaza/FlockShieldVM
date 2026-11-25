@@ -1,67 +1,18 @@
-# SmartLamp JSON API
+# FlockShieldVM
 
-This PHP API stores photoresistor and infrared sensor readings, plus the current
-lamp color state, sent by an ESP32.
-Each request is saved as a timestamped record in `data.json`.
+- [frontend/](frontend/) bevat het dashboard met HTML, CSS en JavaScript.
+- [backend/](backend/) bevat de PHP-API voor FlockShield en de SQL Server-koppeling.
+- [backend/smartlamp/](backend/smartlamp/) bevat de oudere SmartLamp-API en de bijbehorende JSON-opslag. Het PHP-bestand in de hoofdmap houdt het bestaande SmartLamp-ingangspunt beschikbaar.
+- [sketch_nov5a/](sketch_nov5a/) bevat de ESP32-firmware.
 
-## Send sensor data
+## Lokaal starten
 
-### `POST /api.php`
+Voer dit commando vanuit de hoofdmap uit met PHP 8 of hoger.
 
-The `pht` value must be a non-negative integer. The `ir` value is `0` or `1`,
-and `Color` is `0` for white, `1` for red, or `2` for off.
+~~~powershell
+php -S localhost:8000 -t frontend backend/router.php
+~~~
 
-```http
-POST /api.php HTTP/1.1
-Content-Type: application/json
+Open het dashboard op [localhost:8000](http://localhost:8000/). De FlockShield-API gebruikt op dezelfde server routes onder /api. De SmartLamp-API is lokaal bereikbaar via /api.php.
 
-{"pht":420,"ir":1,"Color":0}
-```
-
-Response (`201 Created`):
-
-```json
-{
-  "pht": 420,
-  "ir": 1,
-  "Color": 0,
-  "received_at": "2026-11-03T17:51:41+00:00"
-}
-```
-
-Invalid JSON or sensor values are rejected with an error response.
-
-## Get stored data
-
-### `GET /api.php`
-
-Returns all stored records:
-
-```json
-{
-  "count": 1,
-  "records": [
-    {
-      "pht": 420,
-      "ir": 1,
-      "Color": 0,
-      "received_at": "2026-11-03T17:51:41+00:00"
-    }
-  ]
-}
-```
-
-Use `GET https://stan.1pc.nl/SmartLamp/api.php?limit=1` to return only the 20 most recent records. The
-limit can be from `1` to `1000`.
-
-From the project directory:
-
-Test the API:
-
-```text
-curl -X POST https://stan.1pc.nl/SmartLamp/api.php -H "Content-Type: application/json" -d "{\"pht\":420,\"ir\":1,\"Color\":0}"
-curl https://stan.1pc.nl/SmartLamp/api.php
-curl https://stan.1pc.nl/SmartLamp/api.php?limit=1
-```
-
-The web server user must have permission to write `data.json`.
+Zie de [backendhandleiding](backend/README.md) voor SQL Server en de [SmartLamp-handleiding](backend/smartlamp/README.md) voor het oudere endpoint.

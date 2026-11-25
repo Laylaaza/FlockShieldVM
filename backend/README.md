@@ -18,10 +18,10 @@ De API ondersteunt onder andere modules, vogeldetecties, afschrikacties, energiâ
 
 ## Installatie en starten
 
-Open een terminal in de map boven `aiapi` en voer het volgende commando uit:
+Start vanuit de hoofdmap van het project.
 
 ```bash
-php -S localhost:8000 -t api api/api.php
+php -S localhost:8000 -t frontend backend/router.php
 ```
 
 De API is vervolgens bereikbaar via:
@@ -35,7 +35,7 @@ Vul bovenaan `api.php` de gegevens van de SQL Server-database in:
 - Servernaam of IP-adres
 - Databasenaam
 - Gebruikersnaam
-- Wachtwoord
+- Wachtwoord via de omgevingsvariabele FLOCKSHIELD_DB_PASSWORD
 
 De API maakt verbinding met de bestaande FlockShield-database. De tabellen worden niet automatisch aangemaakt.
 
