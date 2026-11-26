@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f5f7f9">
   <title>Live module · FlockShield</title>
-  <link rel="stylesheet" href="analysis.css?v=3">
-  <script type="module" src="analysis.js?v=3"></script>
+  <link rel="stylesheet" href="analysis.css?v=4">
+  <script type="module" src="analysis.js?v=4"></script>
 </head>
 <body data-view="modules">
   <a class="skip" href="#main">Naar inhoud</a>
@@ -24,7 +24,7 @@
   </header>
   <main class="shell" id="main">
     <div class="page-heading">
-      <div><h1>Live module</h1><p>Kies een module om de status en afschrikacties te volgen.</p></div>
+      <div><div class="label-row"><h1>Live module</h1><button class="info" type="button" data-info="live" aria-label="Uitleg over Live module">i</button></div><p>Kies een module om de status en afschrikacties te volgen.</p></div>
       <span id="sync" role="status">Gegevens laden…</span>
     </div>
     <form id="filters" class="module-picker">
@@ -43,7 +43,7 @@
           <small id="action-time"></small>
         </article>
         <article class="panel live-card">
-          <h3>Activering</h3>
+          <div class="label-row"><h3>Activering</h3><button class="info" type="button" data-info="activation" aria-label="Uitleg over activering">i</button></div>
           <strong id="activation">—</strong>
           <small id="activation-time"></small>
         </article>
@@ -53,7 +53,7 @@
           <small id="detection-source"></small>
         </article>
       </div>
-      <p class="live-note">Een bevestigde activering geeft aan dat het mechanisme is geactiveerd. Of de vogels zijn weggegaan, wordt niet gemeten.</p>
+
       <section class="panel log" id="logboek">
         <header><div><h2>Gebeurtenissen</h2><p>Detecties, afschrikacties en geregistreerde fouten</p></div>
           <label>Type <select id="event-type"><option value="">Alle gebeurtenissen</option><option value="detection">Detecties</option><option value="action">Afschrikacties</option><option value="error">Fouten</option></select></label>

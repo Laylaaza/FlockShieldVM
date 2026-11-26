@@ -1,5 +1,5 @@
 import { getCollection } from './api.js';
-import { actionResult, complete, dayKey, distinct, inPeriod, instant, outcomes, reactionTimes } from './performance.js';
+import { actionResult, complete, distinct, inPeriod, instant, outcomes, reactionTimes } from './performance.js';
 
 const id = (name) => document.getElementById(name);
 const filters = id('filters');
@@ -19,10 +19,36 @@ const datasets = {
 };
 let data = {};
 let page = 1;
+let logMarkup;
 let connectedModule = moduleView ? new URLSearchParams(location.search).get('module') || '' : '';
 let refreshing = false;
 const charts = {};
 let missing = [];
+
+const explanations = {
+  live: ['Live module', 'Kies een module en klik op Verbinden. In een actieve tab haalt dit scherm iedere vijf seconden de laatste gegevens op. De status komt uit de database. De module stuurt geen apart signaal waarmee dit scherm kan controleren of het apparaat online is.'],
+  activation: ['Activering', 'Bevestigd betekent dat de module de activering van het mechanisme heeft bevestigd. Mislukt betekent dat een fout is geregistreerd. Zonder betrouwbare bevestiging blijft de uitkomst onbevestigd. De database meet niet of vogels daarna zijn weggegaan.'],
+  precision: ['Precision', 'Hoe vaak had het model gelijk toen het vogels meldde? Correcte meldingen gedeeld door alle positieve voorspellingen, inclusief valse alarmen.'],
+  recall: ['Recall', 'Hoe vaak vond het model de vogels die werkelijk aanwezig waren? Correcte meldingen gedeeld door alle tests waarin vogels aanwezig waren, inclusief gemiste detecties.'],
+  successful: ['Succesvolle activeringen', 'Bevestigde activeringen gedeeld door acties met een bekende uitkomst. Acties zonder betrouwbare bevestiging of fout tellen niet mee.'],
+  completeness: ['Datavolledigheid', 'Aandeel opgehaalde detecties en afschrikacties met alle verplichte kernvelden voor het logboek. Een betrouwbaarheidsscore is optioneel.'],
+  scenario: ['AI-uitkomsten per scenario', 'Elke balk groepeert de uitkomsten van één scenario in een testronde. De lengte toont het aantal tests. Wissel van gegevensbron onder Filters om simulaties en prototypetests afzonderlijk te bekijken.'],
+  reaction: ['Reactietijd', 'Elk punt is een bevestigde actie met een gekoppelde detectie. De hoogte toont hoeveel seconden er verstreken tussen de detectie en bevestiging. De stippellijn toont de mediaan. Beweeg over een punt of open Bekijk waarden voor het exacte tijdstip.'],
+};
+
+const help = document.createElement('dialog');
+help.className = 'info-dialog';
+help.setAttribute('aria-labelledby', 'info-title');
+help.innerHTML = '<h2 id="info-title"></h2><p id="info-text"></p><form method="dialog"><button class="button" autofocus>Sluiten</button></form>';
+document.body.append(help);
+document.addEventListener('click', (event) => {
+  const trigger = event.target.closest('[data-info]');
+  const explanation = explanations[trigger?.dataset.info];
+  if (!explanation) return;
+  id('info-title').textContent = explanation[0];
+  id('info-text').textContent = explanation[1];
+  help.showModal();
+});
 
 function options(name, choices, fallback = '') {
   const select = filters.elements[name];
@@ -33,9 +59,10 @@ function options(name, choices, fallback = '') {
   select.value = [...select.options].some((option) => option.value === selected) ? selected : fallback;
 }
 
-function metric(title, numerator, denominator, note) {
+function metric(key, title, numerator, denominator, note) {
   const value = denominator ? percentage.format(numerator / denominator) : '—';
-  return '<article class="metric"><h2>' + title + '</h2><strong>' + value + '</strong><small>' +
+  return '<article class="metric"><div class="label-row"><h2>' + title +
+    '</h2><button class="info" type="button" data-info="' + key + '" aria-label="Uitleg over ' + title + '">i</button></div><strong>' + value + '</strong><small>' +
     html(denominator ? numerator + ' van ' + denominator + ' ' + note : note || 'Onvoldoende gegevens') + '</small></article>';
 }
 
@@ -44,7 +71,7 @@ function table(headers, rows) {
     '</tr></thead><tbody>' + rows.map((row) => '<tr>' + row.map((cell) => '<td>' + cell + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>';
 }
 
-function chart(name, config, message, values) {
+function chart(name, config, message, values, height = 250) {
   charts[name]?.destroy();
   delete charts[name];
   const frame = id(name + '-frame');
@@ -53,10 +80,14 @@ function chart(name, config, message, values) {
   canvas.setAttribute('role', 'img');
   canvas.setAttribute('aria-label', name === 'scenario' ? 'AI-uitkomsten per scenario' : 'Reactietijd per bevestigde actie in seconden');
   frame.replaceChildren();
+  frame.style.setProperty('--plot-height', height + 'px');
   details.hidden = !values;
   details.querySelector('div').innerHTML = values || '';
   if (config && globalThis.Chart) {
-    frame.append(canvas);
+    const plot = document.createElement('div');
+    plot.className = 'chart-plot';
+    plot.append(canvas);
+    frame.append(plot);
     charts[name] = new Chart(canvas, config);
   } else {
     const empty = document.createElement('p');
@@ -79,31 +110,47 @@ function renderScenarios(groups, disabledMessage) {
   chart('scenario', hasData ? {
     type: 'bar',
     data: {
-      labels: labels.map((label) => label.length > 23 ? label.slice(0, 22) + '…' : label),
-      datasets: types.map(([key, label, backgroundColor]) => ({ label, backgroundColor, data: series.map((row) => row[key]), borderRadius: 3 })),
+      labels: labels.map((label) => {
+        const [round, ...scenario] = label.split(' / ');
+        const shorten = (part) => part.length > 22 ? part.slice(0, 21) + '…' : part;
+        return [shorten(scenario.join(' / ')), shorten(round)];
+      }),
+      datasets: types.map(([key, label, backgroundColor]) => ({ label, backgroundColor, data: series.map((row) => row[key]), borderRadius: 3, maxBarThickness: 24 })),
     },
     options: {
       responsive: true, maintainAspectRatio: false, animation: false,
-      scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: 'Aantal tests' } } },
-      plugins: { legend: { labels: { boxWidth: 9, boxHeight: 9 } }, tooltip: { callbacks: { title: (items) => labels[items[0].dataIndex] } } },
+      indexAxis: 'y',
+      scales: { x: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: 'Aantal tests' } }, y: { stacked: true, grid: { display: false }, ticks: { autoSkip: false } } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { title: (items) => labels[items[0].dataIndex] } } },
     },
   } : null, disabledMessage || 'Onvoldoende geldige testuitkomsten.', hasData ? table(
     ['Scenario', ...types.map(([, label]) => label)],
     labels.map((label, index) => [html(label), ...types.map(([key]) => series[index][key])]),
-  ) : '');
+  ) : '', Math.max(230, 85 + labels.length * 42));
+  id('scenario-legend').hidden = !hasData;
 }
 
 function renderReactions(points, blocked) {
+  const durations = points.map(({ y }) => y).sort((a, b) => a - b);
+  const middle = Math.floor(durations.length / 2);
+  const median = durations.length % 2 ? durations[middle] : (durations[middle - 1] + durations[middle]) / 2;
+  id('reaction-caption').textContent = points.length
+    ? points.length + (points.length === 1 ? ' bevestigde actie' : ' bevestigde acties') + ' · Mediaan ' + decimal.format(median) + ' s'
+    : 'Van detectie tot bevestigde activering';
+  const indexed = points.map(({ x, y }, index) => ({ x: index + 1, y, time: x }));
   chart('reaction', points.length ? {
     type: 'scatter',
-    data: { datasets: [{ label: 'Reactietijd', data: points, backgroundColor: '#3b7865', pointRadius: 4 }] },
+    data: { datasets: [
+      { label: 'Reactietijd', data: indexed, backgroundColor: '#3b7865', pointRadius: 4, pointHitRadius: 8 },
+      { label: 'Mediaan', type: 'line', data: [{ x: 0.5, y: median }, { x: points.length + 0.5, y: median }], borderColor: '#647885', borderDash: [5, 4], borderWidth: 1.5, pointRadius: 0 },
+    ] },
     options: {
       responsive: true, maintainAspectRatio: false, animation: false,
       scales: {
-        x: { ticks: { maxTicksLimit: 5, callback: (value) => dayKey(value) }, title: { display: true, text: 'Activering (UTC)' } },
+        x: { min: 0.5, max: points.length + 0.5, ticks: { precision: 0, maxTicksLimit: 7, callback: (value) => Number.isInteger(value) ? value : '' }, title: { display: true, text: 'Acties in tijdsvolgorde' } },
         y: { beginAtZero: true, title: { display: true, text: 'Seconden' } },
       },
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ({ raw }) => stamp(raw.x) + ' · ' + decimal.format(raw.y) + ' s' } } },
+      plugins: { legend: { display: false }, tooltip: { filter: (item) => item.datasetIndex === 0, callbacks: { label: ({ raw }) => stamp(raw.time) + ' · ' + decimal.format(raw.y) + ' s' } } },
     },
   } : null, blocked || 'Geen acties met verifieerbare detectie- en activeringstijd.', points.length ? table(
     ['Bevestigde activering', 'Reactietijd'],
@@ -121,18 +168,26 @@ function renderLog(detections, actions, moduleNames, blocked) {
   const pages = Math.max(1, Math.ceil(events.length / 12));
   page = Math.min(page, pages);
   const labels = { detection: 'Detectie', action: 'Afschrikactie', error: 'Fout' };
-  id('events').innerHTML = events.length ? table(
-    ['Tijdstip', 'Type', 'Module', 'Bron / uitkomst', 'Betrouwbaarheid', 'Registratie-ID', 'Detectie-ID'],
+  const markup = events.length ? table(
+    ['Tijdstip (UTC)', 'Gebeurtenis', 'Uitkomst / bron', 'Details'],
     events.slice((page - 1) * 12, page * 12).map(({ row, type, at }) => [
-      html(stamp(at)), '<span class="badge' + (type === 'error' ? ' error' : '') + '">' + labels[type] + '</span>',
-      html(moduleNames.get(String(row.module_id)) || clean(row.module_id) || '—'),
+      at === null ? '—' : html(dateFormat.format(at)), '<span class="badge' + (type === 'error' ? ' error' : '') + '">' + labels[type] + '</span>' +
+        (type !== 'detection' && clean(row.mechanisme_type) ? '<small class="event-mechanism">' + html(row.mechanisme_type) + '</small>' : ''),
       html(type === 'detection' ? (clean(row.invoerbron) || 'Onbekende bron') : type === 'error'
         ? 'Activeringsfout geregistreerd' : actionResult(row) === 'success' ? 'Bevestigd' : 'Uitkomst onbekend'),
-      type === 'detection' && clean(row.betrouwbaarheidsscore) && Number(row.betrouwbaarheidsscore) >= 0 &&
-        Number(row.betrouwbaarheidsscore) <= 1 ? percentage.format(Number(row.betrouwbaarheidsscore)) : '—',
-      html(clean(row.afschrikactie_id ?? row.detectie_id) || '—'), html(clean(row.detectie_id) || '—'),
+      '<details class="event-details"><summary>Gegevens</summary><dl><dt>Module</dt><dd>' +
+        html(moduleNames.get(String(row.module_id)) || clean(row.module_id) || '—') +
+        '</dd><dt>Registratie-ID</dt><dd>' + html(clean(row.afschrikactie_id ?? row.detectie_id) || '—') +
+        '</dd><dt>Detectie-ID</dt><dd>' + html(clean(row.detectie_id) || '—') +
+        '</dd><dt>Betrouwbaarheid</dt><dd>' + (type === 'detection' && clean(row.betrouwbaarheidsscore) &&
+        Number(row.betrouwbaarheidsscore) >= 0 && Number(row.betrouwbaarheidsscore) <= 1
+          ? percentage.format(Number(row.betrouwbaarheidsscore)) : '—') + '</dd></dl></details>',
     ]),
   ) : '<p class="empty">' + html(blocked || 'Geen gebeurtenissen binnen deze selectie.') + '</p>';
+  if (logMarkup !== markup) {
+    id('events').innerHTML = markup;
+    logMarkup = markup;
+  }
   id('event-count').textContent = events.length + ' gebeurtenissen · pagina ' + page + ' van ' + pages;
   id('prev').disabled = page === 1;
   id('next').disabled = page >= pages;
@@ -222,10 +277,10 @@ function renderInsights() {
   const full = detections.filter((row) => complete(row, 'detection')).length + actions.filter((row) => complete(row, 'action')).length;
   const sufficientLog = data.detections && data.actions;
   id('metrics').innerHTML =
-    metric('Precision', total.tp, total.tp + total.fp, total.tp + total.fp ? 'positieve voorspellingen correct' : invalidMessage || 'Geen geldige positieve voorspellingen') +
-    metric('Recall', total.tp, total.tp + total.fn, total.tp + total.fn ? 'tests met vogels correct herkend' : invalidMessage || 'Geen geldige tests met vogels aanwezig') +
-    metric('Succesvolle activeringen', successful, successful + failed, successful + failed ? 'acties met bekende uitkomst bevestigd' : invalidMessage || 'Geen acties met bekende uitkomst') +
-    metric('Datavolledigheid', full, sufficientLog ? detections.length + actions.length : 0, sufficientLog && detections.length + actions.length
+    metric('precision', 'Precision', total.tp, total.tp + total.fp, total.tp + total.fp ? 'vogelmeldingen correct' : invalidMessage || 'Geen geldige positieve voorspellingen') +
+    metric('recall', 'Recall', total.tp, total.tp + total.fn, total.tp + total.fn ? 'tests met vogels correct herkend' : invalidMessage || 'Geen geldige tests met vogels aanwezig') +
+    metric('successful', 'Succesvolle activeringen', successful, successful + failed, successful + failed ? 'acties met bekende uitkomst bevestigd' : invalidMessage || 'Geen acties met bekende uitkomst') +
+    metric('completeness', 'Datavolledigheid', full, sufficientLog ? detections.length + actions.length : 0, sufficientLog && detections.length + actions.length
       ? 'gebeurtenissen met verplichte kernvelden' : invalidMessage || 'Detecties en acties nodig voor deze KPI');
   const groups = new Map();
   for (const { row, title } of matching) {
@@ -234,8 +289,9 @@ function renderInsights() {
   }
   id('scenario-caption').textContent = (form.source ? form.source + ' · ' : '') + matching.length +
     ' evaluaties op datum van de testronde' + (total.invalid ? ' · ' + total.invalid + ' ongeldige uitkomsten overgeslagen' : '');
-  renderScenarios(groups, invalidMessage);
-  renderReactions(reactionTimes(actions, data.detections || []), invalidMessage);
+  renderScenarios(groups, invalidMessage || (!data.rounds || !data.evaluations ? 'De testgegevens konden niet worden opgehaald.' : ''));
+  renderReactions(reactionTimes(actions, data.detections || []), invalidMessage ||
+    (!data.actions || !data.detections ? 'De detecties of acties konden niet worden opgehaald.' : ''));
   const notices = datasetNotices();
   if (invalidMessage) notices.push(invalidMessage);
   showNotices(notices);
