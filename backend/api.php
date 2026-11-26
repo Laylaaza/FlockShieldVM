@@ -62,6 +62,22 @@ function getRequestData()
     return $data;
 }
 
+function moduleFilter()
+{
+    if (!isset($_GET["module_id"])) {
+        return null;
+    }
+
+    $id = filter_var($_GET["module_id"], FILTER_VALIDATE_INT, [
+        "options" => ["min_range" => 1]
+    ]);
+    if ($id === false) {
+        sendJson(["error" => "Ongeldig module_id"], 400);
+    }
+
+    return $id;
+}
+
 // Controleren of een waarde een geldige UUID is.
 function isValidUuid($value)
 {
@@ -173,7 +189,9 @@ elseif ($method === "GET" && $uri === "/api/detections") {
 
     $limit = max(1, min($limit, 1000));
 
-    $statement = $db->query("
+    $moduleId = moduleFilter();
+    $where = $moduleId === null ? "" : "WHERE module_id = :module_id";
+    $statement = $db->prepare("
         SELECT TOP ($limit)
             detectie_id,
             module_id,
@@ -183,8 +201,10 @@ elseif ($method === "GET" && $uri === "/api/detections") {
             invoerbron,
             model_versie
         FROM Detecties
+        $where
         ORDER BY detectie_tijdstip DESC
     ");
+    $statement->execute($moduleId === null ? [] : [":module_id" => $moduleId]);
 
     $detections = $statement->fetchAll(PDO::FETCH_ASSOC);
 
@@ -298,7 +318,9 @@ elseif ($method === "GET" && $uri === "/api/actions") {
 
     $limit = max(1, min($limit, 1000));
 
-    $statement = $db->query("
+    $moduleId = moduleFilter();
+    $where = $moduleId === null ? "" : "WHERE module_id = :module_id";
+    $statement = $db->prepare("
         SELECT TOP ($limit)
             afschrikactie_id,
             module_id,
@@ -309,8 +331,10 @@ elseif ($method === "GET" && $uri === "/api/actions") {
             status,
             foutmelding
         FROM Afschrikacties
+        $where
         ORDER BY opdracht_tijdstip DESC
     ");
+    $statement->execute($moduleId === null ? [] : [":module_id" => $moduleId]);
 
     $actions = $statement->fetchAll(PDO::FETCH_ASSOC);
 

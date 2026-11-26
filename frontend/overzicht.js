@@ -51,7 +51,7 @@ const nav = (href, label, glyph, selected) =>
 
 byId('app').innerHTML = '<a class="skip" href="#main">Naar inhoud</a>' +
   '<header class="site-header"><a class="brand" href="index.html"><span>' + icon('brand') + '</span>FlockShield</a>' +
-  '<nav aria-label="Hoofdnavigatie">' + nav('index.html', 'Inzichten', 'overview', false) + nav('modules.html', 'Modules', 'module', !eventsPage) +
+  '<nav aria-label="Hoofdnavigatie">' + nav('index.html', 'Live module', 'module', false) + nav('inzichten.html', 'Inzichten', 'overview', false) +
   nav('gebeurtenissen.html', 'Gebeurtenissen', 'activity', eventsPage) + '</nav>' +
   '<span class="connection" id="connection" role="status"><i></i> Verbinden…</span></header>' +
   '<main id="main"><header class="top"><div><h1>' + (eventsPage ? 'Gebeurtenissen' : 'Modules') + '</h1><p>' +

@@ -44,13 +44,23 @@ h2 { font-size: 17px; letter-spacing: -.024em; }
 .filter-panel { margin: 0 0 14px; }
 .filter-panel summary { width: fit-content; padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
 .filter-panel .filter-strip { margin: 9px 0 0; }
-.module-picker { margin-bottom: 18px; }
+.module-picker { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; margin-bottom: 18px; }
+.module-picker label { width: min(100%, 340px); }
 .module-picker select { width: min(100%, 340px); max-width: none; }
+.button.primary { border-color: var(--accent); background: var(--accent); color: white; }
+.button.primary:hover:not(:disabled) { background: #194a43; }
 .module-heading { display: flex; align-items: center; gap: 9px; }
 .module-heading h2 { font-size: 22px; }
 #module-meta { margin: 4px 0 13px; color: var(--muted); font-size: 13px; }
-.module-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.module-chart { margin-bottom: 12px; }
+.live-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.live-card { padding: 12px 14px; }
+.live-card h3 { margin: 0; color: var(--muted); font-size: 13px; font-weight: 650; }
+.live-card strong { display: block; margin: 5px 0 2px; font-size: clamp(15px, 2.1vw, 24px); letter-spacing: -.04em; overflow-wrap: anywhere; }
+.live-card small, .live-note { color: var(--muted); font-size: 12px; }
+.live-note { margin: 8px 0 14px; }
+#activation[data-result="success"] { color: var(--accent); }
+#activation[data-result="failed"] { color: #843d33; }
+#module-status:not([data-active="true"]) { background: #eef1f1; color: var(--muted); }
 label { display: grid; gap: 4px; min-width: 0; color: var(--muted); font-size: 11px; font-weight: 700; }
 select { max-width: min(220px, 100%); }
 .notice { margin-bottom: 12px; border: 1px solid #e8dbc1; border-radius: 7px; background: #fffaf0; padding: 8px 11px; color: #654b24; font-size: 13px; }
@@ -87,6 +97,6 @@ tbody tr:hover { background: #f7faf8; }
   main { padding-top: 23px; }
   .charts { grid-template-columns: 1fr; }
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .module-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .live-cards { grid-template-columns: 1fr; }
   .page-heading { align-items: start; flex-direction: column; }
 }

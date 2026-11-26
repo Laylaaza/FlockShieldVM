@@ -19,12 +19,16 @@ const datasets = {
 };
 let data = {};
 let page = 1;
+let connectedModule = moduleView ? new URLSearchParams(location.search).get('module') || '' : '';
+let refreshing = false;
 const charts = {};
 let missing = [];
 
 function options(name, choices, fallback = '') {
   const select = filters.elements[name];
   const selected = select.value;
+  if (select.options.length === choices.length && choices.every(([value, label], index) =>
+    select.options[index].value === value && select.options[index].text === label)) return;
   select.replaceChildren(...choices.map(([value, label]) => new Option(label, value)));
   select.value = [...select.options].some((option) => option.value === selected) ? selected : fallback;
 }
@@ -136,43 +140,50 @@ function renderLog(detections, actions, moduleNames, blocked) {
 
 function renderModule() {
   const modules = new Map((data.modules || []).filter((row) => row.module_id != null).map((row) => [String(row.module_id), row]));
-  for (const row of [...(data.detections || []), ...(data.actions || [])]) {
-    if (row.module_id != null && !modules.has(String(row.module_id))) modules.set(String(row.module_id), { module_id: row.module_id });
-  }
   const names = new Map([...modules].map(([key, row]) => [key, row.naam || row.module_code || 'Module ' + key]));
+  options('module', [['', 'Kies een module'], ...names], connectedModule);
   const select = filters.elements.module;
-  const requested = new URLSearchParams(location.search).get('module');
-  const initial = !select.dataset.ready && modules.has(requested) ? requested : '';
-  options('module', [['', 'Kies een module'], ...names]);
-  if (initial) select.value = initial;
-  select.dataset.ready = 'true';
-  const selected = select.value;
-  const module = modules.get(selected);
+  if (!select.dataset.ready && data.modules) {
+    if (modules.has(connectedModule)) select.value = connectedModule;
+    select.dataset.ready = 'true';
+  }
+  const module = modules.get(connectedModule);
+  id('disconnect').hidden = !connectedModule;
+  const pending = select.value;
+  id('connect').disabled = refreshing || !pending || pending === connectedModule;
   id('module-detail').hidden = !module;
   const notices = datasetNotices();
   if (!modules.size && data.modules) notices.push('Er zijn nog geen modules geregistreerd.');
+  else if (connectedModule && data.modules && !module) notices.push('Deze module is niet beschikbaar. Kies een andere module.');
   showNotices(notices);
   if (!module) return;
 
-  id('module-name').textContent = names.get(selected);
-  id('module-status').textContent = clean(module.status) || 'Status onbekend';
+  id('module-name').textContent = names.get(connectedModule);
+  id('module-status').textContent = clean(module.status) ? 'Geregistreerd: ' + clean(module.status) : 'Status onbekend';
+  id('module-status').dataset.active = String(['actief', 'active'].includes(clean(module.status).toLowerCase()));
   id('module-meta').textContent = [module.module_code, module.module_type].filter(Boolean).join(' · ');
-  const belongs = (row) => String(row.module_id) === selected;
+  const belongs = (row) => String(row.module_id) === connectedModule;
   const detections = (data.detections || []).filter(belongs);
   const actions = (data.actions || []).filter(belongs);
-  const successful = actions.filter((row) => actionResult(row) === 'success').length;
-  const failed = actions.filter((row) => actionResult(row) === 'failed').length;
-  id('metrics').innerHTML =
-    '<article class="metric"><h2>Detecties</h2><strong>' + (data.detections ? detections.length : '—') + '</strong></article>' +
-    '<article class="metric"><h2>Afschrikacties</h2><strong>' + (data.actions ? actions.length : '—') + '</strong></article>' +
-    metric('Succesvolle activeringen', successful, successful + failed, successful + failed ? 'acties met bekende uitkomst bevestigd' : 'Geen acties met bekende uitkomst');
-  renderReactions(reactionTimes(actions, detections), !data.detections || !data.actions ? 'Detecties en acties zijn nodig voor de reactietijd.' : '');
+  const action = actions[0];
+  const detection = detections[0];
+  const result = action ? actionResult(action) : '';
+  id('mechanism').textContent = action ? clean(action.mechanisme_type) || 'Onbekend mechanisme' : data.actions ? 'Geen actie' : '—';
+  id('action-time').textContent = action ? 'Opdracht · ' + stamp(instant(action.opdracht_tijdstip)) : '';
+  id('activation').textContent = ({ success: 'Bevestigd', failed: 'Mislukt', unknown: 'Niet bevestigd' })[result] || '—';
+  id('activation').dataset.result = result;
+  const confirmed = action ? instant(action.activering_bevestigd_op) : null;
+  id('activation-time').textContent = result === 'success' ? stamp(confirmed) :
+    result === 'failed' ? 'Activering is als mislukt geregistreerd.' :
+    result === 'unknown' ? 'Er is geen betrouwbare bevestiging.' : '';
+  id('latest-detection').textContent = detection ? stamp(instant(detection.detectie_tijdstip)) : data.detections ? 'Geen detectie' : '—';
+  id('detection-source').textContent = detection ? clean(detection.invoerbron) : '';
   renderLog(detections, actions, names, !data.detections && !data.actions ? 'Gebeurtenisgegevens konden niet worden opgehaald.' : '');
 }
 
 function datasetNotices() {
   const notices = [];
-  if (missing.length) notices.push('Niet geladen: ' + missing.join(', ') + '.');
+  if (missing.length) notices.push((moduleView ? 'Niet ververst: ' : 'Niet geladen: ') + missing.join(', ') + '.');
   if ((data.detections?.length ?? 0) >= 1000 || (data.actions?.length ?? 0) >= 1000) {
     notices.push('De API levert maximaal 1.000 recente detecties en 1.000 recente acties.');
   }
@@ -233,12 +244,25 @@ function renderInsights() {
 const render = moduleView ? renderModule : renderInsights;
 
 async function refresh() {
+  if (refreshing) return;
+  refreshing = true;
+  const selected = connectedModule;
   id('refresh').disabled = true;
-  id('sync').textContent = 'Gegevens laden…';
-  const keys = moduleView ? ['modules', 'detections', 'actions'] : ['detections', 'actions', 'rounds', 'evaluations'];
+  if (moduleView) id('connect').disabled = true;
+  else id('sync').textContent = 'Gegevens laden…';
+  const keys = moduleView ? (selected ? ['modules', 'detections', 'actions'] : ['modules']) : ['detections', 'actions', 'rounds', 'evaluations'];
   const entries = keys.map((key) => [key, datasets[key]]);
-  const results = await Promise.allSettled(entries.map(([, [path, collection]]) => getCollection(path, collection)));
-  data = {};
+  const results = await Promise.allSettled(entries.map(([key, [path, collection]]) => {
+    const url = moduleView && key !== 'modules' ? collection + '?limit=30&module_id=' + encodeURIComponent(selected) : path;
+    return getCollection(url, collection);
+  }));
+  refreshing = false;
+  id('refresh').disabled = false;
+  if (selected !== connectedModule) {
+    refresh();
+    return;
+  }
+  if (!moduleView) data = {};
   missing = [];
   const names = { modules: 'modules', detections: 'detecties', actions: 'afschrikacties', rounds: 'testrondes', evaluations: 'AI-evaluaties' };
   results.forEach((result, index) => {
@@ -246,15 +270,40 @@ async function refresh() {
     if (result.status === 'fulfilled') data[key] = distinct(result.value, uniqueId);
     else missing.push(names[key]);
   });
-  id('sync').textContent = missing.length ? 'Verbinding onvolledig' : 'Bijgewerkt om ' + new Date().toLocaleTimeString('nl-NL');
-  id('refresh').disabled = false;
+  id('sync').textContent = missing.length ? 'Verbinding onvolledig' : moduleView && !selected
+    ? 'Kies een module om te beginnen' : 'Bijgewerkt om ' + new Date().toLocaleTimeString('nl-NL');
   render();
 }
 
 filters.addEventListener('change', () => { page = 1; render(); });
-filters.addEventListener('submit', (event) => event.preventDefault());
+filters.addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (!moduleView || !filters.elements.module.value) return;
+  connectedModule = filters.elements.module.value;
+  delete data.actions;
+  delete data.detections;
+  missing = [];
+  page = 1;
+  id('event-type').value = '';
+  id('sync').textContent = 'Verbinden…';
+  refresh();
+  render();
+});
 filters.addEventListener('reset', () => setTimeout(() => { page = 1; render(); }, 0));
 if (moduleView) {
+  id('disconnect').addEventListener('click', () => {
+    connectedModule = '';
+    filters.elements.module.value = '';
+    delete data.actions;
+    delete data.detections;
+    missing = [];
+    id('sync').textContent = 'Live verbinding gestopt';
+    render();
+  });
+  setInterval(() => { if (connectedModule && !document.hidden) refresh(); }, 5000);
+  document.addEventListener('visibilitychange', () => {
+    if (connectedModule && !document.hidden) refresh();
+  });
   id('event-type').addEventListener('change', () => { page = 1; render(); });
   id('prev').addEventListener('click', () => { page--; render(); });
   id('next').addEventListener('click', () => { page++; render(); });

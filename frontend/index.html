@@ -4,12 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f5f7f9">
-  <title>Inzichten · FlockShield</title>
-  <link rel="stylesheet" href="analysis.css?v=2">
-  <script defer src="vendor/chart.umd.js"></script>
-  <script type="module" src="analysis.js?v=2"></script>
+  <title>Live module · FlockShield</title>
+  <link rel="stylesheet" href="analysis.css?v=3">
+  <script type="module" src="analysis.js?v=3"></script>
 </head>
-<body>
+<body data-view="modules">
   <a class="skip" href="#main">Naar inhoud</a>
   <header class="app-header">
     <div class="shell header-content">
@@ -17,41 +16,52 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s7-3 7-9V5l-7-3-7 3v7c0 6 7 9 7 9Z"/><path d="m8 13 4-4 4 4m-4-4v7"/></svg>
       </span>FlockShield</a>
       <nav aria-label="Hoofdnavigatie">
-        <a href="index.html" aria-current="page">Inzichten</a>
-        <a href="modules.html">Modules</a>
+        <a href="index.html" aria-current="page">Live module</a>
+        <a href="inzichten.html">Inzichten</a>
       </nav>
       <button id="refresh" class="button" type="button">Vernieuwen</button>
     </div>
   </header>
   <main class="shell" id="main">
     <div class="page-heading">
-      <div><h1>Inzichten</h1><p>Detectieresultaten en reactietijden van alle modules.</p></div>
+      <div><h1>Live module</h1><p>Kies een module om de status en afschrikacties te volgen.</p></div>
       <span id="sync" role="status">Gegevens laden…</span>
     </div>
-    <details class="filter-panel">
-      <summary>Filters</summary>
-      <form id="filters" class="filter-strip">
-      <label>Vanaf <input name="from" type="date"></label>
-      <label>Tot en met <input name="to" type="date"></label>
-      <label>AI-gegevensbron <select name="source"><option value="">Geen bron beschikbaar</option></select></label>
-      <label>AI-testscenario <select name="scenario"><option value="">Alle scenario’s</option></select></label>
-      <button class="button secondary" type="reset">Wis filters</button>
-      </form>
-    </details>
+    <form id="filters" class="module-picker">
+      <label>Module <select name="module" required><option value="">Kies een module</option></select></label>
+      <button id="connect" class="button primary" type="submit" disabled>Verbinden</button>
+      <button id="disconnect" class="button" type="button" hidden>Verbinding stoppen</button>
+    </form>
     <p id="notice" class="notice" role="status" hidden></p>
-    <div id="metrics" class="metrics" aria-label="Kerncijfers"></div>
-    <div class="charts">
-      <section class="panel">
-        <header><h2>AI-uitkomsten per scenario</h2><p id="scenario-caption"></p></header>
-        <div class="chart-frame" id="scenario-frame"><canvas id="scenario-chart" role="img" aria-label="AI-uitkomsten per scenario"></canvas></div>
-        <details id="scenario-data"><summary>Bekijk waarden</summary><div></div></details>
+    <section id="module-detail" hidden>
+      <div class="module-heading"><h2 id="module-name"></h2><span id="module-status" class="badge"></span></div>
+      <p id="module-meta"></p>
+      <div class="live-cards">
+        <article class="panel live-card">
+          <h3>Laatste afschrikactie</h3>
+          <strong id="mechanism">—</strong>
+          <small id="action-time"></small>
+        </article>
+        <article class="panel live-card">
+          <h3>Activering</h3>
+          <strong id="activation">—</strong>
+          <small id="activation-time"></small>
+        </article>
+        <article class="panel live-card">
+          <h3>Laatste vogeldetectie</h3>
+          <strong id="latest-detection">—</strong>
+          <small id="detection-source"></small>
+        </article>
+      </div>
+      <p class="live-note">Een bevestigde activering geeft aan dat het mechanisme is geactiveerd. Of de vogels zijn weggegaan, wordt niet gemeten.</p>
+      <section class="panel log" id="logboek">
+        <header><div><h2>Gebeurtenissen</h2><p>Detecties, afschrikacties en geregistreerde fouten</p></div>
+          <label>Type <select id="event-type"><option value="">Alle gebeurtenissen</option><option value="detection">Detecties</option><option value="action">Afschrikacties</option><option value="error">Fouten</option></select></label>
+        </header>
+        <div id="events"></div>
+        <footer><small id="event-count"></small><div><button class="button" id="prev" type="button">Vorige</button> <button class="button" id="next" type="button">Volgende</button></div></footer>
       </section>
-      <section class="panel">
-        <header><h2>Reactietijd</h2><p>Van detectie tot bevestigde activering, in seconden</p></header>
-        <div class="chart-frame" id="reaction-frame"><canvas id="reaction-chart" role="img" aria-label="Reactietijd per bevestigde actie in seconden"></canvas></div>
-        <details id="reaction-data"><summary>Bekijk waarden</summary><div></div></details>
-      </section>
-    </div>
+    </section>
   </main>
 </body>
 </html>

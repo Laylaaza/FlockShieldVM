@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7f9">
+  <title>Inzichten · FlockShield</title>
+  <link rel="stylesheet" href="analysis.css?v=3">
+  <script defer src="vendor/chart.umd.js"></script>
+  <script type="module" src="analysis.js?v=3"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Naar inhoud</a>
+  <header class="app-header">
+    <div class="shell header-content">
+      <a class="brand" href="index.html"><span class="brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s7-3 7-9V5l-7-3-7 3v7c0 6 7 9 7 9Z"/><path d="m8 13 4-4 4 4m-4-4v7"/></svg>
+      </span>FlockShield</a>
+      <nav aria-label="Hoofdnavigatie">
+        <a href="inzichten.html" aria-current="page">Inzichten</a>
+        <a href="index.html">Live module</a>
+      </nav>
+      <button id="refresh" class="button" type="button">Vernieuwen</button>
+    </div>
+  </header>
+  <main class="shell" id="main">
+    <div class="page-heading">
+      <div><h1>Inzichten</h1><p>Detectieresultaten en reactietijden van alle modules.</p></div>
+      <span id="sync" role="status">Gegevens laden…</span>
+    </div>
+    <details class="filter-panel">
+      <summary>Filters</summary>
+      <form id="filters" class="filter-strip">
+      <label>Vanaf <input name="from" type="date"></label>
+      <label>Tot en met <input name="to" type="date"></label>
+      <label>AI-gegevensbron <select name="source"><option value="">Geen bron beschikbaar</option></select></label>
+      <label>AI-testscenario <select name="scenario"><option value="">Alle scenario’s</option></select></label>
+      <button class="button secondary" type="reset">Wis filters</button>
+      </form>
+    </details>
+    <p id="notice" class="notice" role="status" hidden></p>
+    <div id="metrics" class="metrics" aria-label="Kerncijfers"></div>
+    <div class="charts">
+      <section class="panel">
+        <header><h2>AI-uitkomsten per scenario</h2><p id="scenario-caption"></p></header>
+        <div class="chart-frame" id="scenario-frame"><canvas id="scenario-chart" role="img" aria-label="AI-uitkomsten per scenario"></canvas></div>
+        <details id="scenario-data"><summary>Bekijk waarden</summary><div></div></details>
+      </section>
+      <section class="panel">
+        <header><h2>Reactietijd</h2><p>Van detectie tot bevestigde activering, in seconden</p></header>
+        <div class="chart-frame" id="reaction-frame"><canvas id="reaction-chart" role="img" aria-label="Reactietijd per bevestigde actie in seconden"></canvas></div>
+        <details id="reaction-data"><summary>Bekijk waarden</summary><div></div></details>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
