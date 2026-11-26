@@ -77,7 +77,15 @@ select { max-width: min(220px, 100%); }
 .metric h2 { font-size: 13px; letter-spacing: 0; }
 .metric strong { display: block; margin: 5px 0 2px; font-size: clamp(23px, 3vw, 35px); color: var(--accent); letter-spacing: -.05em; font-variant-numeric: tabular-nums; }
 .metric small, .log footer small { color: var(--muted); font-size: 12px; }
-.charts { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; margin-bottom: 12px; }
+.insights-heading { padding: clamp(17px, 4vw, 27px); border-radius: 13px; background: #234740; color: #fff; }
+.insights-heading p, .insights-heading #sync { color: #dbe9e2; }
+.chart-controls { display: flex; flex-wrap: wrap; gap: 5px; margin: 18px 0 8px; }
+.chart-controls button { padding: 8px 11px; border-radius: 7px; border: 1px solid transparent; background: transparent; color: var(--muted); font-size: 13px; font-weight: 650; }
+.chart-controls button:hover { background: var(--soft); color: var(--accent); }
+.chart-controls button[aria-pressed="true"] { background: var(--surface); color: var(--accent); border-color: #a7beb3; }
+.chart-workspace { margin-bottom: 12px; }
+.chart-panel header { padding-bottom: 13px; }
+.chart-panel .chart-frame { margin-inline: clamp(10px, 2vw, 23px); }
 .panel { min-width: 0; }
 .panel header { padding: 13px 15px 9px; }
 .chart-frame { max-height: 390px; overflow: auto; margin: 0 15px; }
@@ -111,7 +119,6 @@ tbody tr:hover { background: #f7faf8; }
   .header-content button { grid-column: 2; grid-row: 1; }
   nav { grid-column: span 2; min-height: 36px; }
   main { padding-top: 23px; }
-  .charts { grid-template-columns: 1fr; }
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .live-cards { grid-template-columns: 1fr; }
   .page-heading { align-items: start; flex-direction: column; }

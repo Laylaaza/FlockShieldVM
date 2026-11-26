@@ -1,5 +1,5 @@
 import { getCollection } from './api.js';
-import { actionResult, complete, distinct, inPeriod, instant, outcomes, reactionTimes } from './performance.js';
+import { actionResult, complete, dayKey, distinct, inPeriod, instant, outcomes, reactionTimes } from './performance.js';
 
 const id = (name) => document.getElementById(name);
 const filters = id('filters');
@@ -7,6 +7,8 @@ const moduleView = document.body.dataset.view === 'modules';
 const dateFormat = new Intl.DateTimeFormat('nl-NL', { dateStyle: 'short', timeStyle: 'short', timeZone: 'UTC' });
 const percentage = new Intl.NumberFormat('nl-NL', { style: 'percent', maximumFractionDigits: 1 });
 const decimal = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 3 });
+const countFormat = new Intl.NumberFormat('nl-NL');
+const shortDate = new Intl.DateTimeFormat('nl-NL', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const clean = (value) => String(value ?? '').trim();
 const html = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const stamp = (value) => value === null ? '—' : dateFormat.format(value) + ' UTC';
@@ -24,6 +26,7 @@ let connectedModule = moduleView ? new URLSearchParams(location.search).get('mod
 let refreshing = false;
 const charts = {};
 let missing = [];
+let selectedChart = 'activity';
 
 const explanations = {
   live: ['Live module', 'Kies een module en klik op Verbinden. In een actieve tab haalt dit scherm iedere vijf seconden de laatste gegevens op. De status komt uit de database. De module stuurt geen apart signaal waarmee dit scherm kan controleren of het apparaat online is.'],
@@ -32,6 +35,9 @@ const explanations = {
   recall: ['Recall', 'Hoe vaak vond het model de vogels die werkelijk aanwezig waren? Correcte meldingen gedeeld door alle tests waarin vogels aanwezig waren, inclusief gemiste detecties.'],
   successful: ['Succesvolle activeringen', 'Bevestigde activeringen gedeeld door acties met een bekende uitkomst. Acties zonder betrouwbare bevestiging of fout tellen niet mee.'],
   completeness: ['Datavolledigheid', 'Aandeel opgehaalde detecties en afschrikacties met alle verplichte kernvelden voor het logboek. Een betrouwbaarheidsscore is optioneel.'],
+  activity: ['Activiteit per dag', 'Vergelijk het aantal detecties en afschrikopdrachten per UTC-dag. De grafiek toont maximaal 31 dagen tot de gekozen einddatum of de laatste registratie. Een dag met nul registraties betekent dat er in de opgehaalde gegevens niets voor die dag staat.'],
+  'activation-chart': ['Uitkomst van afschrikacties', 'De ring vergelijkt bevestigde, mislukte en onbevestigde acties. De grafiek telt alle opgehaalde acties in de gekozen periode. Het activeringspercentage bovenaan gebruikt alleen acties met een bekende uitkomst.'],
+  modules: ['Vergelijk modules', 'Vergelijk hoeveel detecties en afschrikopdrachten per module zijn opgehaald. De grafiek toont maximaal twaalf modules met de meeste registraties. De tabel toont ook modules zonder registraties in deze selectie.'],
   scenario: ['AI-uitkomsten per scenario', 'Elke balk groepeert de uitkomsten van één scenario in een testronde. De lengte toont het aantal tests. Wissel van gegevensbron onder Filters om simulaties en prototypetests afzonderlijk te bekijken.'],
   reaction: ['Reactietijd', 'Elk punt is een bevestigde actie met een gekoppelde detectie. De hoogte toont hoeveel seconden er verstreken tussen de detectie en bevestiging. De stippellijn toont de mediaan. Beweeg over een punt of open Bekijk waarden voor het exacte tijdstip.'],
 };
@@ -78,7 +84,7 @@ function chart(name, config, message, values, height = 250) {
   const details = id(name + '-data');
   const canvas = document.createElement('canvas');
   canvas.setAttribute('role', 'img');
-  canvas.setAttribute('aria-label', name === 'scenario' ? 'AI-uitkomsten per scenario' : 'Reactietijd per bevestigde actie in seconden');
+  canvas.setAttribute('aria-label', frame.closest('section').querySelector('h2').textContent);
   frame.replaceChildren();
   frame.style.setProperty('--plot-height', height + 'px');
   details.hidden = !values;
@@ -95,6 +101,107 @@ function chart(name, config, message, values, height = 250) {
     empty.textContent = config ? 'Grafiek niet geladen. De waarden staan hieronder.' : message;
     frame.append(empty);
   }
+}
+
+const seriesStyle = { detection: '#3b7865', action: '#7387a0', failed: '#bd7664', unknown: '#c3b48a' };
+const legend = { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 14 } };
+const plotOptions = { responsive: true, maintainAspectRatio: false, animation: false };
+const countScale = { beginAtZero: true, ticks: { precision: 0 } };
+
+function renderActivity(detections, actions, period, message) {
+  const interval = 86400000;
+  const counts = (rows, field) => {
+    const result = new Map();
+    for (const row of rows || []) {
+      const key = dayKey(instant(row[field]));
+      if (key) result.set(key, (result.get(key) || 0) + 1);
+    }
+    return result;
+  };
+  const detectionDays = counts(detections, 'detectie_tijdstip');
+  const actionDays = counts(actions, 'opdracht_tijdstip');
+  const observed = [...detectionDays.keys(), ...actionDays.keys()].sort();
+  const hasData = observed.length > 0;
+  const first = Date.parse(period.from || observed[0]);
+  const last = Date.parse(period.to || observed.at(-1));
+  const windowStart = Math.max(first, last - 30 * interval);
+  const days = hasData ? Array.from({ length: (last - windowStart) / interval + 1 }, (_, i) => windowStart + i * interval) : [];
+  const plotted = days.map((time) => [detectionDays.get(dayKey(time)) || 0, actionDays.get(dayKey(time)) || 0]);
+  const totals = [0, 1].map((index) => plotted.reduce((sum, counts) => sum + counts[index], 0));
+  const datasets = [
+    [detections, 'Detecties', seriesStyle.detection, 0],
+    [actions, 'Afschrikopdrachten', seriesStyle.action, 1],
+  ].filter(([rows]) => rows !== undefined).map(([, label, color, index]) => ({
+    label, data: plotted.map((row) => row[index]), borderColor: color, backgroundColor: color,
+    pointRadius: 3, pointHoverRadius: 5, borderWidth: 2,
+  }));
+  id('activity-caption').textContent = days.length ? [
+    detections && countFormat.format(totals[0]) + ' detecties',
+    actions && countFormat.format(totals[1]) + ' opdrachten',
+    shortDate.format(days[0]) + ' – ' + shortDate.format(days.at(-1)) + ' (UTC)',
+  ].filter(Boolean).join(' · ') : 'Detecties en opdrachten per UTC-dag';
+  chart('activity', days.length ? {
+    type: 'line',
+    data: { labels: days.map((time) => shortDate.format(time)), datasets },
+    options: {
+      ...plotOptions, interaction: { mode: 'index', intersect: false },
+      scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } }, y: countScale },
+      plugins: { legend },
+    },
+  } : null, message || 'Geen registraties met een datum in deze selectie.', days.length ? table(
+    ['Datum (UTC)', 'Detecties', 'Afschrikopdrachten'],
+    days.map((time, index) => [dayKey(time), detections ? plotted[index][0] : '—', actions ? plotted[index][1] : '—']),
+  ) : '', 310);
+}
+
+function renderActivations(actions, successful, failed, message) {
+  const total = actions?.length || 0;
+  const counts = [successful, failed, total - successful - failed];
+  const labels = ['Bevestigd', 'Mislukt', 'Onbevestigd'];
+  id('activation-caption').textContent = total
+    ? labels.map((label, index) => countFormat.format(counts[index]) + ' ' + label.toLowerCase()).join(' · ')
+    : 'Verdeling van de geregistreerde uitkomsten';
+  chart('activation', total ? {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: counts, backgroundColor: [seriesStyle.detection, seriesStyle.failed, seriesStyle.unknown], borderWidth: 2, hoverOffset: 5 }] },
+    options: { ...plotOptions, cutout: '70%', plugins: { legend } },
+  } : null, message || 'Geen afschrikacties in deze selectie.', total ? table(['Uitkomst', 'Aantal', 'Aandeel'],
+    labels.map((label, index) => [label, counts[index], percentage.format(counts[index] / total)]),
+  ) : '', 310);
+}
+
+function renderModuleComparison(detections, actions, message) {
+  const rows = new Map();
+  const item = (key) => {
+    if (!rows.has(key)) rows.set(key, { name: key ? 'Module ' + key : 'Onbekende module', detections: 0, actions: 0 });
+    return rows.get(key);
+  };
+  for (const module of data.modules || []) {
+    item(clean(module.module_id)).name = clean(module.naam) || clean(module.module_code) || 'Module ' + module.module_id;
+  }
+  for (const row of detections || []) item(clean(row.module_id)).detections++;
+  for (const row of actions || []) item(clean(row.module_id)).actions++;
+  const ordered = [...rows.values()].sort((a, b) => b.detections + b.actions - a.detections - a.actions || a.name.localeCompare(b.name, 'nl'));
+  const plotted = ordered.filter((row) => row.detections || row.actions).slice(0, 12);
+  id('modules-caption').textContent = plotted.length ? 'Aantal registraties per module · ' + plotted.length + ' in de grafiek' : 'Detecties en afschrikopdrachten per module';
+  const datasets = [
+    [detections, 'Detecties', 'detections', seriesStyle.detection],
+    [actions, 'Afschrikopdrachten', 'actions', seriesStyle.action],
+  ].filter(([records]) => records !== undefined).map(([, label, key, backgroundColor]) => ({
+    label, backgroundColor, data: plotted.map((row) => row[key]), borderRadius: 4, maxBarThickness: 14,
+  }));
+  chart('modules', plotted.length ? {
+    type: 'bar',
+    data: { labels: plotted.map(({ name }) => name.length > 24 ? name.slice(0, 23) + '…' : name), datasets },
+    options: {
+      ...plotOptions, indexAxis: 'y',
+      scales: { x: countScale, y: { grid: { display: false }, ticks: { autoSkip: false } } },
+      plugins: { legend, tooltip: { callbacks: { title: (items) => plotted[items[0].dataIndex].name } } },
+    },
+  } : null, message || 'Geen registraties per module in deze selectie.', !message && ordered.length ? table(
+    ['Module', 'Detecties', 'Afschrikopdrachten'],
+    ordered.map((row) => [html(row.name), detections ? row.detections : '—', actions ? row.actions : '—']),
+  ) : '', Math.max(260, 70 + plotted.length * 32));
 }
 
 function renderScenarios(groups, disabledMessage) {
@@ -289,9 +396,25 @@ function renderInsights() {
   }
   id('scenario-caption').textContent = (form.source ? form.source + ' · ' : '') + matching.length +
     ' evaluaties op datum van de testronde' + (total.invalid ? ' · ' + total.invalid + ' ongeldige uitkomsten overgeslagen' : '');
-  renderScenarios(groups, invalidMessage || (!data.rounds || !data.evaluations ? 'De testgegevens konden niet worden opgehaald.' : ''));
-  renderReactions(reactionTimes(actions, data.detections || []), invalidMessage ||
-    (!data.actions || !data.detections ? 'De detecties of acties konden niet worden opgehaald.' : ''));
+  const operationalMessage = invalidMessage || (!data.actions && !data.detections ? 'De detecties en acties konden niet worden opgehaald.' : '');
+  switch (selectedChart) {
+    case 'activity':
+      renderActivity(data.detections && detections, data.actions && actions, form, operationalMessage);
+      break;
+    case 'activation':
+      renderActivations(data.actions && actions, successful, failed, invalidMessage || (!data.actions ? 'De acties konden niet worden opgehaald.' : ''));
+      break;
+    case 'modules':
+      renderModuleComparison(data.detections && detections, data.actions && actions, operationalMessage);
+      break;
+    case 'scenario':
+      renderScenarios(groups, invalidMessage || (!data.rounds || !data.evaluations ? 'De testgegevens konden niet worden opgehaald.' : ''));
+      break;
+    case 'reaction':
+      renderReactions(reactionTimes(actions, data.detections || []), invalidMessage ||
+        (!data.actions || !data.detections ? 'De detecties of acties konden niet worden opgehaald.' : ''));
+      break;
+  }
   const notices = datasetNotices();
   if (invalidMessage) notices.push(invalidMessage);
   showNotices(notices);
@@ -306,7 +429,7 @@ async function refresh() {
   id('refresh').disabled = true;
   if (moduleView) id('connect').disabled = true;
   else id('sync').textContent = 'Gegevens laden…';
-  const keys = moduleView ? (selected ? ['modules', 'detections', 'actions'] : ['modules']) : ['detections', 'actions', 'rounds', 'evaluations'];
+  const keys = moduleView ? (selected ? ['modules', 'detections', 'actions'] : ['modules']) : ['modules', 'detections', 'actions', 'rounds', 'evaluations'];
   const entries = keys.map((key) => [key, datasets[key]]);
   const results = await Promise.allSettled(entries.map(([key, [path, collection]]) => {
     const url = moduleView && key !== 'modules' ? collection + '?limit=30&module_id=' + encodeURIComponent(selected) : path;
@@ -363,6 +486,20 @@ if (moduleView) {
   id('event-type').addEventListener('change', () => { page = 1; render(); });
   id('prev').addEventListener('click', () => { page--; render(); });
   id('next').addEventListener('click', () => { page++; render(); });
+} else {
+  const controls = document.querySelectorAll('[data-chart]');
+  const panels = document.querySelectorAll('[data-chart-panel]');
+  for (const button of controls) {
+    button.addEventListener('click', () => {
+      if (button.dataset.chart === selectedChart) return;
+      charts[selectedChart]?.destroy();
+      delete charts[selectedChart];
+      selectedChart = button.dataset.chart;
+      for (const control of controls) control.setAttribute('aria-pressed', String(control === button));
+      for (const panel of panels) panel.hidden = panel.dataset.chartPanel !== selectedChart;
+      render();
+    });
+  }
 }
 id('refresh').addEventListener('click', refresh);
 refresh();
